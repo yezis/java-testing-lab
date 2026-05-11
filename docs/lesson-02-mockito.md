@@ -685,6 +685,142 @@ doAnswer(invocation -> invocation.getArgument(0))
 普通返回值优先 when...then...；void 方法和 Spy 场景优先 do...when...
 ```
 
+## `Spy`：部分模拟真实对象
+
+`Mock` 和 `Spy` 都是 Mockito 提供的测试替身，但它们的默认行为不同。
+
+### `Mock` 的默认行为
+
+`Mock` 是一个假的对象。
+
+如果没有 Stub，它的方法不会执行真实逻辑，而是返回默认值：
+
+- 对象类型返回 `null`
+- `int` 返回 `0`
+- `boolean` 返回 `false`
+- 集合可能返回空或 `null`
+
+例如：
+
+```java
+@Mock
+private OrderCalculator orderCalculator;
+```
+
+如果没有写：
+
+```java
+when(orderCalculator.calculateTotal(...)).thenReturn(...);
+```
+
+那么调用 `calculateTotal(...)` 时不会执行 `OrderCalculator` 里的真实计算逻辑。
+
+### `Spy` 的默认行为
+
+`Spy` 是包在真实对象外面的一层测试替身。
+
+如果没有 Stub，它会调用真实方法。
+
+例如：
+
+```java
+@Spy
+private OrderCalculator orderCalculator = new OrderCalculator();
+```
+
+如果测试中调用：
+
+```java
+orderCalculator.calculateTotal(new BigDecimal("59.90"), 2);
+```
+
+默认会执行 `OrderCalculator` 的真实计算逻辑。
+
+### `Spy` 适合什么场景
+
+`Spy` 适合“我想用大部分真实行为，只替换其中一小部分”的场景。
+
+常见例子：
+
+- 某个类大部分方法可以真实执行，但其中一个方法依赖当前时间
+- 某个类大部分方法可以真实执行，但其中一个方法会访问外部系统
+- 想验证真实对象上的某个方法是否被调用
+
+但要注意：`Spy` 比 `Mock` 更容易让测试依赖真实实现细节，所以不要滥用。
+
+### `Spy` 为什么常配合 `doReturn`
+
+对于 `Spy`，下面这种写法有风险：
+
+```java
+when(orderCalculator.calculateTotal(new BigDecimal("59.90"), 2))
+        .thenReturn(new BigDecimal("100.00"));
+```
+
+因为在 `when(...)` 阶段，Spy 可能会先调用一次真实方法。
+
+更推荐写成：
+
+```java
+doReturn(new BigDecimal("100.00"))
+        .when(orderCalculator)
+        .calculateTotal(new BigDecimal("59.90"), 2);
+```
+
+`doReturn(...).when(...)` 的好处是：
+
+```text
+安排 Stub 时，不会先执行真实方法。
+```
+
+这就是前面说的：
+
+```text
+Spy 场景优先 do...when...
+```
+
+### 当前项目里的练习思路
+
+当前 `OrderServiceTest` 里 `OrderCalculator` 是 Mock：
+
+```java
+@Mock
+private OrderCalculator orderCalculator;
+```
+
+下一步可以把它改成 Spy：
+
+```java
+@Spy
+private OrderCalculator orderCalculator = new OrderCalculator();
+```
+
+然后成功创建订单的测试就不一定需要 Stub 金额计算：
+
+```java
+when(orderCalculator.calculateTotal(any(), eq(2)))
+        .thenReturn(new BigDecimal("119.80"));
+```
+
+因为 Spy 默认会调用 `OrderCalculator` 的真实计算逻辑。
+
+不过异常测试里如果仍然不希望真实计算，或者想强行指定返回值，可以用：
+
+```java
+doReturn(new BigDecimal("119.80"))
+        .when(orderCalculator)
+        .calculateTotal(any(), eq(2));
+```
+
+### `Mock` 和 `Spy` 的选择
+
+一般建议：
+
+- 测 Service 时，外部依赖优先用 `Mock`。
+- 纯计算类可以真实使用，也可以用 `Spy` 学习部分模拟。
+- 如果一个对象会访问数据库、网络、文件、消息队列，通常不要用 `Spy`，优先用 `Mock`。
+- 如果发现测试里大量使用 `Spy`，通常说明类的职责可能太复杂，需要重新设计。
+
 ## 本课已完成内容
 
 当前 `OrderServiceTest` 已经覆盖：
@@ -712,3 +848,4 @@ BUILD SUCCESS
 4. 在成功创建订单的测试中，使用 `InOrder` 验证调用顺序：先查商品，再计算金额，最后保存订单。
 5. 把保存失败测试里的 `when(...).thenThrow(...)` 改成 `doThrow(...).when(...)`，观察测试结果是否仍然通过。
 6. 把成功创建订单测试里的 `when(...).thenAnswer(...)` 改成 `doAnswer(...).when(...)`，观察测试结果是否仍然通过。
+7. 把 `OrderCalculator` 从 `@Mock` 改成 `@Spy`，体验真实方法默认会被调用。
