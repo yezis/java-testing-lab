@@ -77,7 +77,9 @@ mock-maker-subclass
 
 ## 学习文档
 
+- [Agent 协作说明](AGENTS.md)
 - [学习计划](docs/learning-plan.md)
+- [学习方式与改进约定](docs/learning-method.md)
 - [第 1 课：JUnit 5 单元测试入门](docs/lesson-01-junit5.md)
 - [第 2 课：Mockito 与 Service 层单元测试](docs/lesson-02-mockito.md)
 - [当前学习进度交接](docs/session-progress.md)
