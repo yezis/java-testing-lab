@@ -67,6 +67,16 @@ Keep test code clean.
 
 Do not leave old commented-out implementations in test classes. Put comparisons and explanations in docs instead.
 
+When introducing a new learning topic, prefer adding new code instead of modifying already completed examples.
+
+Use one of these approaches:
+
+- add a new test method
+- add a dedicated demo test class
+- add a small focused production class for the concept
+
+Avoid repeatedly rewriting tests that already passed and represent earlier learning milestones. Modify existing code only when it is wrong, blocks future work, needs small cleanup, or the user explicitly asks for refactoring.
+
 Use existing project style. Do not introduce unnecessary abstractions.
 
 For Java tests:
