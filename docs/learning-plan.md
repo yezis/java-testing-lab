@@ -18,6 +18,8 @@
 
 ## 阶段 1：单元测试基础
 
+状态：已完成。
+
 - JUnit 5 基本结构
 - 常用断言
 - 异常测试
@@ -27,13 +29,23 @@
 
 ## 阶段 2：Mock 与可测试代码设计
 
+状态：已完成并收束。
+
 - Mockito 基本使用
 - Mock、Stub、Spy 的区别
 - 验证方法调用
 - 测试 Service 层业务逻辑
 - 降低代码对外部依赖的耦合
+- `ArgumentCaptor`
+- `InOrder`
+- `doReturn`、`doThrow`、`doAnswer`
+- `void` 方法测试
+- strict stubbing 与常见 Mockito 错误
+- `lenient()` 的作用和使用边界
 
 ## 阶段 3：Spring Boot 测试
+
+状态：下一阶段。
 
 - `@SpringBootTest`
 - `@WebMvcTest`

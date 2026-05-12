@@ -928,6 +928,293 @@ assertThatThrownBy(() -> orderNotificationService.notifyOrderCreated(orderId))
 - 抛出异常：用 `doThrow(...).when(...)` 准备异常，再用 `assertThatThrownBy(...)` 断言。
 - 如果还要验证调用次数，可以结合 `times(1)`。
 
+## Strict Stubbing：发现多余或不匹配的 Stub
+
+Mockito 的 `MockitoExtension` 默认会进行较严格的 Stub 检查。它的目标是让测试代码保持干净，尽早发现“写了 Stub 但测试没有真正用到”的问题。
+
+### `PotentialStubbingProblem`
+
+这个错误表示：测试中对某个方法做了 Stub，但业务代码真实调用这个方法时，参数和 Stub 不匹配。
+
+本项目练习中观察到的场景：
+
+```text
+Stub：messageSender.send("unused message")
+真实调用：messageSender.send("Order created: o-1001")
+```
+
+Mockito 报错：
+
+```text
+Strict stubbing argument mismatch
+```
+
+含义：
+
+```text
+同一个方法被调用了，但实际参数和测试准备的 Stub 参数不一致。
+```
+
+这通常说明：
+
+- Stub 参数写错了
+- 业务代码实际行为和测试预期不一致
+- 测试里有复制粘贴留下的错误 Stub
+
+### `UnnecessaryStubbingException`
+
+这个错误表示：测试里写了 Stub，但这个 Stub 对应的方法在测试执行过程中完全没有被调用。
+
+本项目练习中观察到的场景：
+
+```text
+Stub：productRepository.findById("unused-product")
+测试过程：没有任何代码调用 findById("unused-product")
+```
+
+Mockito 报错：
+
+```text
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+```
+
+含义：
+
+```text
+测试里存在多余准备代码，应该删除。
+```
+
+### 两类错误的区别
+
+```text
+PotentialStubbingProblem：
+Stub 了某个方法，但真实调用时参数不匹配。
+
+UnnecessaryStubbingException：
+Stub 写了，但对应方法完全没有被调用。
+```
+
+### 处理原则
+
+优先做法：
+
+```text
+删除没用的 Stub，或把 Stub 参数改成真实业务调用会使用的参数。
+```
+
+不优先做法：
+
+```text
+一看到 strict stubbing 报错就使用 lenient。
+```
+
+`lenient` 可以放宽检查，但学习阶段先不要依赖它。大多数时候，strict stubbing 报错都在提醒测试代码确实不够干净或不够准确。
+
+## `lenient()`：放宽 strict stubbing
+
+`lenient()` 用来告诉 Mockito：这个 Stub 即使没有被用到，也不要因为 strict stubbing 报错。
+
+示例：
+
+```java
+lenient().when(productRepository.findById("unused-product"))
+        .thenReturn(Optional.empty());
+```
+
+如果不加 `lenient()`，这类未使用 Stub 通常会触发：
+
+```text
+UnnecessaryStubbingException
+```
+
+### 什么时候可以考虑使用
+
+`lenient()` 适合少数共享 setup 场景：
+
+```text
+多个测试共用一段初始化 Stub，
+但其中某些测试确实不会用到其中一部分 Stub。
+```
+
+### 什么时候不该使用
+
+不应该把 `lenient()` 当成让测试通过的快捷方式。
+
+优先处理顺序：
+
+```text
+1. 删除无用 Stub。
+2. 把 Stub 移到真正需要它的测试方法里。
+3. 确实存在共享 setup 的合理原因时，再考虑 lenient()。
+```
+
+一句话总结：
+
+```text
+lenient() 是 strict stubbing 的例外开关，不是常规写法。
+```
+
+## 常见 Mockito 错误总结
+
+### 参数匹配器混用
+
+错误示例：
+
+```java
+verify(orderCalculator).calculateTotal(any(), 2);
+```
+
+原因：
+
+```text
+同一次方法调用里，一个参数用了 matcher，其他参数也必须用 matcher。
+```
+
+正确写法：
+
+```java
+verify(orderCalculator).calculateTotal(any(), eq(2));
+```
+
+也可以完全不用 matcher：
+
+```java
+verify(orderCalculator).calculateTotal(new BigDecimal("59.90"), 2);
+```
+
+### `PotentialStubbingProblem`
+
+含义：
+
+```text
+Stub 了某个方法，但真实调用时参数不匹配。
+```
+
+优先检查：
+
+```text
+Stub 参数和业务代码真实调用参数是否一致。
+```
+
+### `UnnecessaryStubbingException`
+
+含义：
+
+```text
+写了 Stub，但测试过程中完全没有用到。
+```
+
+优先处理：
+
+```text
+删除无用 Stub，或把 Stub 移到真正需要它的测试方法里。
+```
+
+### `Spy` 真实方法提前执行
+
+风险写法：
+
+```java
+when(orderCalculator.calculateTotal(any(), eq(2)))
+        .thenReturn(new BigDecimal("100.00"));
+```
+
+原因：
+
+```text
+Spy 使用 when(spy.method(...)) 时，可能在 Stub 设置阶段先执行真实方法。
+```
+
+推荐写法：
+
+```java
+doReturn(new BigDecimal("100.00"))
+        .when(orderCalculator)
+        .calculateTotal(any(), eq(2));
+```
+
+### `Wanted but not invoked`
+
+含义：
+
+```text
+verify(...) 期望某个方法被调用，但业务代码实际没有调用。
+```
+
+优先检查：
+
+```text
+1. 业务代码是否真的调用了这个方法。
+2. 调用参数是否和 verify 期望一致。
+3. 被验证的 Mock 是否就是业务代码实际使用的依赖对象。
+```
+
+## Mockito 基础总复盘
+
+### Mock、Stub、Verify
+
+```text
+Mock：模拟依赖对象。
+Stub：给 Mock 或 Spy 的方法设置返回值、异常或 Answer。
+Verify：验证 Mock 或 Spy 的方法是否按预期被调用。
+```
+
+### ArgumentCaptor
+
+```text
+当方法参数是复杂对象，且需要检查对象内部字段时使用 ArgumentCaptor。
+```
+
+例如当前项目中，`OrderServiceTest` 使用 `ArgumentCaptor<Order>` 捕获传给 `orderRepository.save(...)` 的 `Order` 对象，再验证订单字段是否正确。
+
+### Spy 和 Mock
+
+```text
+Spy：默认调用真实方法。
+Mock：默认不执行真实逻辑，通常返回 null、0、false 等默认值。
+```
+
+Spy 打 Stub 推荐：
+
+```java
+doReturn(value)
+        .when(spy)
+        .method(...);
+```
+
+原因：
+
+```text
+doReturn(...).when(spy).method(...) 不会在设置 Stub 时调用真实方法。
+```
+
+这样可以避免 `when(spy.method(any()))` 在 Stub 阶段提前执行真实方法，导致 `null` 参数触发异常。
+
+### void 方法测试
+
+```text
+void 正常调用：用 verify(...) 验证依赖方法被调用。
+void 抛异常：用 doThrow(...).when(mock).voidMethod(...) 准备异常，再用 assertThatThrownBy(...) 断言。
+```
+
+### strict stubbing
+
+strict stubbing 主要帮助发现两类问题：
+
+```text
+1. Stub 参数不匹配：PotentialStubbingProblem
+2. Stub 完全没用到：UnnecessaryStubbingException
+```
+
+### lenient()
+
+```text
+lenient() 可以放宽 strict stubbing。
+```
+
+但无用 Stub 应优先删除，或者移动到真正需要它的测试方法里，所以不建议优先使用 `lenient()`。
+
 ## 本课已完成内容
 
 当前 `OrderServiceTest` 已经覆盖：
@@ -946,6 +1233,10 @@ assertThatThrownBy(() -> orderNotificationService.notifyOrderCreated(orderId))
 - 使用独立的 `OrderNotificationServiceTest` 学习 `void` 方法测试
 - 使用 `verify(...)` 验证 `void` 方法调用
 - 使用 `doThrow(...).when(...)` 模拟 `void` 方法抛异常
+- 观察 strict stubbing 的两类常见错误
+- 区分 `PotentialStubbingProblem` 和 `UnnecessaryStubbingException`
+- 了解 `lenient()` 的作用和使用边界
+- 总结常见 Mockito 错误及排查方向
 
 当前测试运行结果：
 
@@ -967,3 +1258,6 @@ BUILD SUCCESS
 9. 对比 `when(spy.method(...)).thenReturn(...)` 和 `doReturn(...).when(spy).method(...)` 的差异。
 10. 新增独立的 `OrderNotificationServiceTest`，用 `verify(...)` 验证 `void` 方法调用。
 11. 使用 `doThrow(...).when(...)` 模拟 `void` 方法抛异常。
+12. 观察 strict stubbing 的 `PotentialStubbingProblem` 和 `UnnecessaryStubbingException`。
+13. 了解 `lenient()` 只作为 strict stubbing 的例外开关。
+14. 复盘常见 Mockito 错误：matcher 混用、未使用 Stub、Spy 提前调用真实方法、`Wanted but not invoked`。

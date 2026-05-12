@@ -129,6 +129,26 @@ mock-maker-subclass
 
 ## 已学习内容
 
+## 整体阶段进度
+
+```text
+阶段 1：单元测试基础 - 已完成
+阶段 2：Mock 与可测试代码设计 - 已完成并收束
+阶段 3：Spring Boot 测试 - 下一阶段
+阶段 4：接口自动化测试 - 未开始
+阶段 5：属性测试与 Fuzzing - 未开始
+阶段 6：数据库与外部服务 - 未开始
+阶段 7：持续集成与质量度量 - 未开始
+阶段 8：UI 自动化测试 - 未开始
+```
+
+当前建议：
+
+```text
+下一次学习从 Spring Boot 测试开始。
+Mockito 高级能力如 BDDMockito、static mock、constructor mock、deep stubs 暂时只做了解，不继续深挖。
+```
+
 ### JUnit 5
 
 已经学习并在项目中实践：
@@ -174,6 +194,8 @@ mock-maker-subclass
 - strict stubbing 初步观察
 - `PotentialStubbingProblem`
 - `UnnecessaryStubbingException`
+- `lenient()` 的作用和使用边界
+- 常见 Mockito 错误总结
 
 ## 当前业务代码含义
 
@@ -298,7 +320,7 @@ src/test/java/com/example/testinglab/notification/OrderNotificationServiceTest.j
 
 ## 下一步学习任务
 
-当前正在学习 Mockito 的 `strict stubbing`。
+Mockito 基础已完成并收束。
 
 ```text
 目标：理解 Mockito 如何发现“写了 Stub 但实际没有用到”的测试问题。
@@ -318,12 +340,34 @@ src/test/java/com/example/testinglab/notification/OrderNotificationServiceTest.j
    - 含义：测试里存在多余 Stub，应删除无用准备代码
 ```
 
-当前需要做：
+当前已完成：
 
 ```text
 1. 删除临时的 shouldShowUnnecessaryStubbingError 失败测试。
 2. 运行 mvn test，恢复 Tests run: 16, Failures: 0, Errors: 0, Skipped: 0。
-3. 然后把 strict stubbing 总结写入 docs/lesson-02-mockito.md。
+3. 已把 strict stubbing 总结写入 docs/lesson-02-mockito.md。
+```
+
+已继续完成：
+
+```text
+1. 已了解 lenient()：它能放宽 strict stubbing，但不要优先使用。
+2. 已总结常见 Mockito 错误：
+   - matcher 混用
+   - PotentialStubbingProblem
+   - UnnecessaryStubbingException
+   - Spy 真实方法提前执行
+   - Wanted but not invoked
+3. 已把 lenient() 和常见错误总结写入 docs/lesson-02-mockito.md。
+4. 已把 Mockito 基础总复盘写入 docs/lesson-02-mockito.md，方便后续复习。
+```
+
+下一步建议：
+
+```text
+1. 可选：小清理测试代码的 import 顺序、重复字符串和多余空行。
+2. 进入 Spring Boot 测试。
+3. Mockito 高级能力只做了解，不继续深挖。
 ```
 
 可选清理：

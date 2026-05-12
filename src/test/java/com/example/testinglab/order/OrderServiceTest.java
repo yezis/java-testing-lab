@@ -117,11 +117,4 @@ class OrderServiceTest {
         verify(orderRepository, times(1)).save(any(Order.class));
     }
 
-    @Test
-    public void shouldShowUnnecessaryStubbingError() {
-        when(productRepository.findById("unused-product")).thenReturn(Optional.empty());
-
-        assertThat(true).isTrue();
-    }
-
 }
