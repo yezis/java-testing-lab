@@ -171,6 +171,9 @@ mock-maker-subclass
 - `void` 方法测试
 - 用 `verify(...)` 验证 `void` 方法调用
 - 用 `doThrow(...).when(...)` 模拟 `void` 方法抛异常
+- strict stubbing 初步观察
+- `PotentialStubbingProblem`
+- `UnnecessaryStubbingException`
 
 ## 当前业务代码含义
 
@@ -295,20 +298,32 @@ src/test/java/com/example/testinglab/notification/OrderNotificationServiceTest.j
 
 ## 下一步学习任务
 
-下一步进入 Mockito 的 `strict stubbing`。
+当前正在学习 Mockito 的 `strict stubbing`。
 
 ```text
 目标：理解 Mockito 如何发现“写了 Stub 但实际没有用到”的测试问题。
 ```
 
-建议练习方式：
+已经观察过两个受控失败场景：
 
 ```text
-1. 在 OrderNotificationServiceTest 中临时新增一个受控失败测试。
-2. 故意写一个未使用的 Stub，例如对 messageSender.send("unused message") 做 doThrow。
-3. 实际调用 orderNotificationService.notifyOrderCreated("o-1001")。
-4. 运行 mvn test，观察 Mockito 的 UnnecessaryStubbingException 或相关错误提示。
-5. 分析后删除或改正该临时失败测试，不长期保留失败测试。
+1. PotentialStubbingProblem
+   - Stub 了 messageSender.send("unused message")
+   - 真实调用是 messageSender.send("Order created: o-1001")
+   - 含义：同一个方法被调用了，但参数和 Stub 不匹配
+
+2. UnnecessaryStubbingException
+   - Stub 了 productRepository.findById("unused-product")
+   - 测试过程中完全没有调用这个 Stub
+   - 含义：测试里存在多余 Stub，应删除无用准备代码
+```
+
+当前需要做：
+
+```text
+1. 删除临时的 shouldShowUnnecessaryStubbingError 失败测试。
+2. 运行 mvn test，恢复 Tests run: 16, Failures: 0, Errors: 0, Skipped: 0。
+3. 然后把 strict stubbing 总结写入 docs/lesson-02-mockito.md。
 ```
 
 可选清理：
