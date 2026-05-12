@@ -27,6 +27,7 @@ docs/learning-method.md
 docs/session-progress.md
 docs/lesson-01-junit5.md
 docs/lesson-02-mockito.md
+docs/lesson-03-spring-boot-test.md
 ```
 
 Before continuing a learning session, read at least:
@@ -62,6 +63,39 @@ Default flow for each topic:
 Prefer guiding the user to write code instead of immediately providing full final implementations. Provide full code when the user is blocked, when the setup is mechanical, or when precision matters.
 
 ## Code Quality Rules
+
+## Package Structure
+
+The project uses a lightweight DDD / Clean Architecture package structure. Keep new code in the appropriate layer:
+
+```text
+com.example.testinglab
+├── common.error
+├── order.domain
+├── order.application
+├── order.interfaces.rest
+├── product.domain
+├── notification.domain
+└── notification.application
+```
+
+Layer rules:
+
+- `domain`: entities, domain services/rules, domain exceptions, repository interfaces.
+- `application`: application services and use-case orchestration.
+- `interfaces.rest`: Spring MVC controllers, request DTOs, response DTOs.
+- `common.error`: shared error response and global exception handling.
+
+Tests should mirror the production package when practical:
+
+```text
+order.domain -> OrderCalculatorTest
+order.application -> OrderServiceTest
+order.interfaces.rest -> OrderControllerTest
+notification.application -> OrderNotificationServiceTest
+```
+
+Do not add new production classes directly under `order`, `product`, `notification`, or `common` root packages unless there is a clear reason.
 
 Keep test code clean.
 
@@ -138,9 +172,9 @@ When a meaningful learning milestone is completed, update the relevant docs.
 
 ## Current Topic
 
-The project is currently in Mockito learning.
+The project is currently in Spring Boot testing.
 
-The next planned topic is `Spy`, based on the current `docs/session-progress.md`.
+The next planned topic is request body JSON testing for `POST /api/orders`, based on the current `docs/session-progress.md`.
 
 Before proceeding, check the actual current code and test status because the user may have made changes after the progress document was last updated.
 

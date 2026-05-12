@@ -11,6 +11,7 @@
 - JUnit 5
 - AssertJ
 - Mockito
+- Spring Boot 测试
 - Maven 测试命令
 
 ## 环境要求
@@ -39,6 +40,44 @@ src/test/java
 ```
 
 测试代码目录。
+
+当前业务代码采用轻量 DDD / 整洁架构分层：
+
+```text
+com.example.testinglab
+├── common.error
+│   ├── ErrorResponse
+│   └── GlobalExceptionHandler
+├── order
+│   ├── domain
+│   │   ├── Order
+│   │   ├── OrderCalculator
+│   │   ├── OrderNotFoundException
+│   │   └── OrderRepository
+│   ├── application
+│   │   ├── OrderService
+│   │   ├── OrderQueryService
+│   │   └── OrderCommandService
+│   └── interfaces.rest
+│       ├── OrderController
+│       ├── OrderResponse
+│       └── CreateOrderRequest
+├── product.domain
+│   ├── Product
+│   └── ProductRepository
+└── notification
+    ├── domain
+    │   └── MessageSender
+    └── application
+        └── OrderNotificationService
+```
+
+分层含义：
+
+- `domain`：业务实体、领域规则、领域异常、Repository 接口
+- `application`：应用服务和用例编排
+- `interfaces.rest`：HTTP Controller、请求 DTO、响应 DTO
+- `common.error`：通用错误响应和全局异常处理
 
 ```text
 src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker
@@ -82,6 +121,7 @@ mock-maker-subclass
 - [学习方式与改进约定](docs/learning-method.md)
 - [第 1 课：JUnit 5 单元测试入门](docs/lesson-01-junit5.md)
 - [第 2 课：Mockito 与 Service 层单元测试](docs/lesson-02-mockito.md)
+- [第 3 课：Spring Boot Web 层测试](docs/lesson-03-spring-boot-test.md)
 - [当前学习进度交接](docs/session-progress.md)
 
 当前学习进度、环境细节、测试状态和下一步任务记录在：
