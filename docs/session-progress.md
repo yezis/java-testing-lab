@@ -102,6 +102,10 @@ src/main/java/com/example/testinglab/product/Product.java
 src/main/java/com/example/testinglab/product/ProductRepository.java
 src/main/java/com/example/testinglab/notification/MessageSender.java
 src/main/java/com/example/testinglab/notification/OrderNotificationService.java
+src/main/java/com/example/testinglab/TestingLabApplication.java
+src/main/java/com/example/testinglab/order/OrderController.java
+src/main/java/com/example/testinglab/order/OrderQueryService.java
+src/main/java/com/example/testinglab/order/OrderResponse.java
 ```
 
 测试代码：
@@ -134,7 +138,7 @@ mock-maker-subclass
 ```text
 阶段 1：单元测试基础 - 已完成
 阶段 2：Mock 与可测试代码设计 - 已完成并收束
-阶段 3：Spring Boot 测试 - 下一阶段
+阶段 3：Spring Boot 测试 - 已开始，业务骨架已准备
 阶段 4：接口自动化测试 - 未开始
 阶段 5：属性测试与 Fuzzing - 未开始
 阶段 6：数据库与外部服务 - 未开始
@@ -145,8 +149,34 @@ mock-maker-subclass
 当前建议：
 
 ```text
-下一次学习从 Spring Boot 测试开始。
+下一次学习从第一个 @WebMvcTest 开始。
 Mockito 高级能力如 BDDMockito、static mock、constructor mock、deep stubs 暂时只做了解，不继续深挖。
+```
+
+### Spring Boot 测试
+
+已完成准备：
+
+- `pom.xml` 已新增 `spring-boot-starter-web`
+- `pom.xml` 已新增 `spring-boot-starter-test`
+- 新增 `TestingLabApplication`
+- 新增 `OrderController`
+- 新增 `OrderQueryService`
+- 新增 `OrderResponse`
+
+当前 Spring Boot 示例接口：
+
+```text
+GET /api/orders/{orderId}
+```
+
+当前 Controller 行为：
+
+```text
+OrderController.getOrder(orderId)
+-> 调用 OrderQueryService.findById(orderId)
+-> 转换为 OrderResponse
+-> 返回 JSON
 ```
 
 ### JUnit 5
@@ -320,7 +350,7 @@ src/test/java/com/example/testinglab/notification/OrderNotificationServiceTest.j
 
 ## 下一步学习任务
 
-Mockito 基础已完成并收束。
+Mockito 基础已完成并收束，下一步进入 Spring Boot 测试。
 
 ```text
 目标：理解 Mockito 如何发现“写了 Stub 但实际没有用到”的测试问题。
@@ -365,15 +395,21 @@ Mockito 基础已完成并收束。
 下一步建议：
 
 ```text
-1. 可选：小清理测试代码的 import 顺序、重复字符串和多余空行。
-2. 进入 Spring Boot 测试。
-3. Mockito 高级能力只做了解，不继续深挖。
+1. 新增 OrderControllerTest。
+2. 使用 @WebMvcTest(OrderController.class)。
+3. 注入 MockMvc。
+4. 使用 @MockBean OrderQueryService 替换 Spring 容器中的 Service。
+5. 测试 GET /api/orders/o-1001 返回 200。
+6. 验证 JSON 字段：orderId、productName、quantity、totalAmount。
 ```
 
-可选清理：
+建议测试信息：
 
 ```text
-整理 OrderNotificationServiceTest 的 import 顺序、重复字符串和多余空行。
+测试类：src/test/java/com/example/testinglab/order/OrderControllerTest.java
+测试方法：shouldReturnOrderWhenOrderExists
+关键 API：@WebMvcTest、MockMvc、@MockBean、mockMvc.perform(get(...))、status().isOk()、jsonPath(...)
+注意：当前 Spring Boot 版本是 3.3.5，先使用 @MockBean；Spring Boot 3.4+ 才推荐 @MockitoBean。
 ```
 
 ## 后续学习路线
