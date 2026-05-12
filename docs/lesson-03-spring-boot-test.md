@@ -493,6 +493,251 @@ verifyNoInteractions(orderQueryService);
 
 这样能确认触发 `400` 的原因确实是 `orderId` 格式错误。
 
+## POST 请求体 JSON 测试
+
+GET 请求通常通过路径参数或查询参数传值。
+
+POST 请求常见做法是通过请求体传 JSON，例如：
+
+```json
+{
+  "productId": "p-1001",
+  "quantity": 2
+}
+```
+
+Controller 中使用 `@RequestBody` 接收 JSON：
+
+```java
+@PostMapping
+public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest request) {
+    return OrderResponse.from(orderCommandService.createOrder(request.productId(), request.quantity()));
+}
+```
+
+含义：
+
+```text
+1. Spring MVC 读取 HTTP 请求体
+2. 把 JSON 反序列化成 CreateOrderRequest
+3. @Valid 触发请求体字段校验
+4. Controller 调用 orderCommandService.createOrder(...)
+5. 返回 OrderResponse JSON
+```
+
+## 请求 DTO：`CreateOrderRequest`
+
+`CreateOrderRequest` 是请求 DTO，专门表示创建订单接口的入参。
+
+当前使用 Java `record`：
+
+```java
+public record CreateOrderRequest(
+        @NotBlank(message = "productId must not be blank")
+        String productId,
+
+        @Min(value = 1, message = "quantity must be greater than or equal to 1")
+        int quantity
+) {
+}
+```
+
+`record` 适合只承载数据的对象。Java 会自动生成构造器、字段访问方法、`equals`、`hashCode` 和 `toString`。
+
+所以取值时使用：
+
+```java
+request.productId()
+request.quantity()
+```
+
+而不是：
+
+```java
+request.getProductId()
+request.getQuantity()
+```
+
+## MockMvc 发送 JSON
+
+POST 测试中使用：
+
+```java
+mockMvc.perform(post("/api/orders")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+                {
+                    "productId": "p-1001",
+                    "quantity": 2
+                }
+                """))
+```
+
+关键点：
+
+```text
+post("/api/orders")：
+模拟 POST 请求。
+
+contentType(MediaType.APPLICATION_JSON)：
+告诉 Spring MVC 请求体是 JSON。
+
+content(...)：
+设置 HTTP 请求体内容。
+```
+
+完整测试目标：
+
+```text
+1. Stub orderCommandService.createOrder("p-1001", 2) 返回一个 Order
+2. MockMvc 发起 POST /api/orders
+3. 请求体传入 productId 和 quantity
+4. 断言状态码是 200
+5. 断言响应 JSON 字段正确
+6. verify orderCommandService.createOrder("p-1001", 2)
+```
+
+这个测试验证的是：
+
+```text
+JSON 请求体
+-> CreateOrderRequest
+-> Controller
+-> OrderCommandService
+-> OrderResponse JSON
+```
+
+## POST 请求体校验失败
+
+`CreateOrderRequest` 中定义了请求体字段校验规则：
+
+```java
+public record CreateOrderRequest(
+        @NotBlank(message = "productId must not be blank")
+        String productId,
+
+        @Min(value = 1, message = "quantity must be greater than or equal to 1")
+        int quantity
+) {
+}
+```
+
+当请求体是：
+
+```json
+{
+  "productId": "p-1001",
+  "quantity": 0
+}
+```
+
+`quantity` 不满足 `@Min(1)`，所以 Spring MVC 会在进入业务逻辑前抛出 `MethodArgumentNotValidException`。
+
+本项目在 `GlobalExceptionHandler` 中处理这个异常，并返回：
+
+```text
+400 Bad Request
+```
+
+测试目标：
+
+```text
+1. MockMvc 发起 POST /api/orders
+2. 请求体中 quantity = 0
+3. 断言状态码是 400
+4. 断言 code = INVALID_REQUEST
+5. 断言 message 包含 quantity must be greater than or equal to 1
+6. 验证 orderCommandService 没有被调用
+```
+
+这里使用：
+
+```java
+verifyNoInteractions(orderCommandService);
+```
+
+含义：
+
+```text
+请求体校验失败时，Controller 不应该进入创建订单的业务逻辑。
+```
+
+执行流程：
+
+```text
+1. MockMvc 发送 POST JSON
+2. Spring MVC 把 JSON 转成 CreateOrderRequest
+3. @Valid 触发字段校验
+4. quantity = 0 不满足 @Min(1)
+5. Spring MVC 抛出 MethodArgumentNotValidException
+6. GlobalExceptionHandler 转换为 400 + ErrorResponse
+7. orderCommandService 不被调用
+```
+
+## JSON 反序列化失败
+
+请求体校验失败和 JSON 反序列化失败不是同一类问题。
+
+例如：
+
+```json
+{
+  "productId": "p-1001",
+  "quantity": "abc"
+}
+```
+
+这里 `quantity` 在 Java 中是 `int`：
+
+```java
+int quantity
+```
+
+但 JSON 中传入的是字符串 `"abc"`。
+
+这时 Spring MVC 无法把请求体转换成 `CreateOrderRequest`，所以还没进入 `@Min(1)` 校验阶段，就会抛出：
+
+```text
+HttpMessageNotReadableException
+```
+
+本项目在 `GlobalExceptionHandler` 中处理它：
+
+```java
+@ExceptionHandler(HttpMessageNotReadableException.class)
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public ErrorResponse handleHttpMessageNotReadable(HttpMessageNotReadableException exception) {
+    return new ErrorResponse("INVALID_REQUEST", "request body is not readable");
+}
+```
+
+测试目标：
+
+```text
+1. MockMvc 发起 POST /api/orders
+2. 请求体中 quantity = "abc"
+3. Spring MVC 无法把 "abc" 转成 int
+4. 断言状态码是 400
+5. 断言 code = INVALID_REQUEST
+6. 断言 message = request body is not readable
+7. 验证 orderCommandService 没有被调用
+```
+
+对比：
+
+```text
+quantity = 0
+-> JSON 可以转成 int
+-> 进入 @Valid
+-> 违反 @Min(1)
+-> MethodArgumentNotValidException
+
+quantity = "abc"
+-> JSON 不能转成 int
+-> 无法创建 CreateOrderRequest
+-> HttpMessageNotReadableException
+```
+
 ## 小复盘
 
 ### 1. `@WebMvcTest` 解决什么问题？
@@ -534,13 +779,136 @@ OrderController.getOrder(...)
 -> 不调用 orderQueryService
 ```
 
-## 下一步
+### 6. `@RequestBody` 和 `content(...)` 解决什么问题？
 
-继续学习请求参数校验，例如：
+`@RequestBody` 让 Controller 可以接收 HTTP 请求体中的 JSON。
+
+`MockMvc.content(...)` 用于在测试里模拟这个 JSON 请求体。
+
+当前项目里：
 
 ```text
-GET /api/orders/{orderId}
-orderId 为空或格式不合法时，接口应该返回 400。
+POST /api/orders
+-> JSON 请求体
+-> CreateOrderRequest
+-> orderCommandService.createOrder(...)
 ```
 
-这会引出新的 Spring Boot 测试知识点：参数校验、`@Valid`、`@Validated` 和 400 响应测试。
+### 7. 请求体校验失败时为什么要验证 Service 不被调用？
+
+因为参数校验属于 Web 层入口保护。
+
+非法请求应该在进入业务逻辑前被拒绝：
+
+```text
+非法 JSON 字段
+-> 400 Bad Request
+-> 不调用 application service
+```
+
+### 8. `HttpMessageNotReadableException` 解决什么问题？
+
+它表示 HTTP 请求体无法被读取或转换成目标 Java 对象。
+
+当前项目里：
+
+```text
+quantity = "abc"
+-> 无法转换成 int
+-> 返回 400
+-> 不调用 orderCommandService
+```
+
+## `@WebMvcTest` 阶段收束
+
+`@WebMvcTest` 可以理解为 Controller / Web 层切片测试。
+
+它会加载：
+
+```text
+指定的 Controller
+Spring MVC 相关组件
+MockMvc
+JSON 序列化和反序列化
+ControllerAdvice，例如 GlobalExceptionHandler
+```
+
+它不会加载：
+
+```text
+普通 Service Bean
+Repository Bean
+数据库相关配置
+完整 Spring Boot 应用上下文
+```
+
+更准确地说，`@WebMvcTest` 不是没有 Spring 上下文，而是只加载 Web 层需要的那一部分 Spring 测试上下文。
+
+### `@MockBean` 和 `@Mock`
+
+`@Mock`：
+
+```text
+只在当前测试类中创建 Mockito Mock，不会注册到 Spring 容器。
+```
+
+`@MockBean`：
+
+```text
+创建 Mockito Mock，并注册到 Spring 测试容器中，用来替换 Controller 依赖的 Bean。
+```
+
+因此在 `OrderControllerTest` 中需要：
+
+```java
+@MockBean
+private OrderQueryService orderQueryService;
+
+@MockBean
+private OrderCommandService orderCommandService;
+```
+
+否则 `OrderController` 启动时找不到依赖。
+
+### 适合用 `@WebMvcTest` 的场景
+
+当想专门测试 Controller 层时，可以使用 `@WebMvcTest`。
+
+它适合验证：
+
+```text
+URL 和 HTTP 方法
+路径参数绑定
+请求体 JSON 反序列化
+参数校验
+状态码
+响应 JSON
+异常响应
+Controller 是否调用了正确的 Service
+```
+
+它不适合验证：
+
+```text
+真实 Service 业务逻辑
+Repository 查询
+数据库交互
+完整业务链路
+```
+
+一句话总结：
+
+```text
+@WebMvcTest = Controller / Web 层切片测试。
+```
+
+## 下一步
+
+继续对比 `@WebMvcTest` 和 `@SpringBootTest`：
+
+```text
+@WebMvcTest：只测 Web 层
+@SpringBootTest：启动更完整的 Spring 上下文
+```
+
+随后进入 `@SpringBootTest + MockMvc`。

@@ -1,6 +1,6 @@
 # Java 自动化测试学习进度交接
 
-更新时间：2026-05-12 23:11 CST
+更新时间：2026-05-13 00:05 CST
 
 ## 项目位置
 
@@ -44,7 +44,7 @@ mvn test
 最近一次测试结果：
 
 ```text
-Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -182,7 +182,7 @@ mock-maker-subclass
 当前建议：
 
 ```text
-下一次学习请求体 JSON 测试：POST /api/orders。
+下一次学习 @SpringBootTest + MockMvc。
 不要为了新知识点反复修改已经完成的 Mockito 测试；Spring Boot 测试应新增独立测试类。
 新增代码时遵守当前分层：domain、application、interfaces.rest、common.error。
 ```
@@ -248,6 +248,10 @@ mock-maker-subclass
 - 已完成统一错误响应 JSON 测试
 - 已完成路径参数格式校验和 `400 Bad Request` 测试
 - 已完成包结构重构：从按实体平铺改为轻量 DDD / 整洁架构分层
+- 已完成 POST /api/orders 请求体 JSON 成功场景测试
+- 已完成 POST /api/orders 请求体字段校验失败测试
+- 已完成 JSON 反序列化失败测试：quantity = "abc" 返回 400
+- 已完成 @WebMvcTest 小阶段问答收束
 
 当前 Spring Boot 示例接口：
 
@@ -268,7 +272,17 @@ OrderController.getOrder(orderId)
 下一步练习：
 
 ```text
-学习请求体 JSON 测试：POST /api/orders。
+进入 @SpringBootTest + MockMvc，学习完整 Spring 上下文测试。
+```
+
+@WebMvcTest 阶段总结：
+
+```text
+@WebMvcTest 是 Controller / Web 层切片测试。
+它加载 Controller、Spring MVC、MockMvc、JSON 序列化/反序列化、ControllerAdvice。
+它不加载普通 Service、Repository、数据库配置和完整 Spring Boot 应用上下文。
+Controller 依赖的 Service 通常用 @MockBean 替代。
+它适合验证 URL、HTTP 方法、参数绑定、请求体、参数校验、状态码、响应 JSON 和异常响应。
 ```
 
 已完成的测试目标：
@@ -303,6 +317,46 @@ OrderController.getOrder(orderId)
 3. 断言 HTTP 状态码是 400
 4. 断言 JSON 字段 code = INVALID_REQUEST
 5. 验证 orderQueryService 没有任何交互
+```
+
+已完成的 POST 请求体测试目标：
+
+```text
+当请求 POST /api/orders 时：
+1. 请求体 JSON 包含 productId = p-1001、quantity = 2
+2. Mock OrderCommandService.createOrder("p-1001", 2) 返回一个 Order
+3. MockMvc 发起 POST 请求并设置 Content-Type = application/json
+4. 断言 HTTP 状态码是 200
+5. 断言响应 JSON 字段 orderId、productName、quantity、totalAmount
+6. 验证 orderCommandService.createOrder("p-1001", 2) 被调用
+```
+
+已完成的 POST 请求体校验失败测试目标：
+
+```text
+当请求 POST /api/orders 且 quantity = 0 时：
+1. MockMvc 发起 POST 请求并设置 Content-Type = application/json
+2. 请求体 JSON 包含 productId = p-1001、quantity = 0
+3. @Valid 校验 CreateOrderRequest
+4. quantity 不满足 @Min(1)
+5. 断言 HTTP 状态码是 400
+6. 断言 JSON 字段 code = INVALID_REQUEST
+7. 断言 JSON 字段 message 包含 quantity must be greater than or equal to 1
+8. 验证 orderCommandService 没有任何交互
+```
+
+已完成的 JSON 反序列化失败测试目标：
+
+```text
+当请求 POST /api/orders 且 quantity = "abc" 时：
+1. MockMvc 发起 POST 请求并设置 Content-Type = application/json
+2. 请求体 JSON 中 quantity 是字符串，无法转换为 int
+3. Spring MVC 抛出 HttpMessageNotReadableException
+4. GlobalExceptionHandler 转换为 400 + ErrorResponse
+5. 断言 HTTP 状态码是 400
+6. 断言 JSON 字段 code = INVALID_REQUEST
+7. 断言 JSON 字段 message 包含 request body is not readable
+8. 验证 orderCommandService 没有任何交互
 ```
 
 本节遇到并修复的问题：
