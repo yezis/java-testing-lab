@@ -9,6 +9,8 @@
 - 使用 `@InjectMocks` 创建被测试对象
 - 使用 `when(...).thenReturn(...)` 准备依赖返回值
 - 使用 `verify(...)` 验证依赖是否被调用
+- 理解 `Mock` 和 `Spy` 的区别
+- 测试 `void` 方法的调用和异常
 
 ## 示例业务
 
@@ -779,38 +781,59 @@ doReturn(new BigDecimal("100.00"))
 Spy 场景优先 do...when...
 ```
 
-### 当前项目里的练习思路
+### 当前项目里的练习方式
 
-当前 `OrderServiceTest` 里 `OrderCalculator` 是 Mock：
+为了不反复改已经完成的 `OrderServiceTest`，当前项目新增了一个专门的 Spy 练习类：
 
-```java
-@Mock
-private OrderCalculator orderCalculator;
+```text
+src/test/java/com/example/testinglab/order/OrderCalculatorSpyTest.java
 ```
 
-下一步可以把它改成 Spy：
+这个类只用于学习 `Spy`，不替换之前已经通过的 Service 层测试。
+
+第一个测试验证：Spy 默认调用真实方法。
 
 ```java
-@Spy
-private OrderCalculator orderCalculator = new OrderCalculator();
+@Test
+void shouldCallRealMethodByDefaultWhenUsingSpy() {
+    BigDecimal total = orderCalculator.calculateTotal(new BigDecimal("59.90"), 2);
+
+    assertThat(total).isEqualByComparingTo(new BigDecimal("119.80"));
+}
 ```
 
-然后成功创建订单的测试就不一定需要 Stub 金额计算：
+第二个测试验证：Spy 可以局部 Stub。
 
 ```java
-when(orderCalculator.calculateTotal(any(), eq(2)))
-        .thenReturn(new BigDecimal("119.80"));
+@Test
+void shouldUseStubbedValueWhenSpyMethodIsStubbed() {
+    doReturn(new BigDecimal("100.00"))
+            .when(orderCalculator)
+            .calculateTotal(any(), eq(2));
+
+    BigDecimal total = orderCalculator.calculateTotal(new BigDecimal("59.90"), 2);
+
+    assertThat(total).isEqualByComparingTo(new BigDecimal("100.00"));
+}
 ```
 
-因为 Spy 默认会调用 `OrderCalculator` 的真实计算逻辑。
+这里真实计算结果本来应该是 `119.80`，但因为测试对 `calculateTotal(...)` 打了 Stub，所以最终返回 `100.00`。
 
-不过异常测试里如果仍然不希望真实计算，或者想强行指定返回值，可以用：
+第三个测试验证：对 Spy 使用 `when(...).thenReturn(...)` 时可能提前调用真实方法。
 
 ```java
-doReturn(new BigDecimal("119.80"))
-        .when(orderCalculator)
-        .calculateTotal(any(), eq(2));
+@Test
+void shouldThrowExceptionWhenStubbingSpyWithWhenAndMatcher() {
+    assertThatThrownBy(() ->
+            when(orderCalculator.calculateTotal(any(), eq(2)))
+                    .thenReturn(new BigDecimal("100.00"))
+    )
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("unitPrice must not be null");
+}
 ```
+
+原因是 `any()` 在 Stub 设置阶段会提供 `null`，而 Spy 可能会先执行真实的 `calculateTotal(...)`，于是触发业务代码里的空值校验。
 
 ### `Mock` 和 `Spy` 的选择
 
@@ -820,6 +843,90 @@ doReturn(new BigDecimal("119.80"))
 - 纯计算类可以真实使用，也可以用 `Spy` 学习部分模拟。
 - 如果一个对象会访问数据库、网络、文件、消息队列，通常不要用 `Spy`，优先用 `Mock`。
 - 如果发现测试里大量使用 `Spy`，通常说明类的职责可能太复杂，需要重新设计。
+
+## `void` 方法测试
+
+`void` 方法没有返回值，所以测试重点通常不是断言返回结果，而是验证它是否对依赖产生了正确调用。
+
+当前项目新增了一个通知示例：
+
+```text
+src/main/java/com/example/testinglab/notification/MessageSender.java
+src/main/java/com/example/testinglab/notification/OrderNotificationService.java
+src/test/java/com/example/testinglab/notification/OrderNotificationServiceTest.java
+```
+
+业务代码：
+
+```java
+public void notifyOrderCreated(String orderId) {
+    messageSender.send("Order created: " + orderId);
+}
+```
+
+### 验证 `void` 方法被调用
+
+当 `notifyOrderCreated("o-1001")` 被调用时，测试要验证：
+
+```text
+messageSender.send("Order created: o-1001") 被调用
+```
+
+关键写法：
+
+```java
+verify(messageSender).send("Order created: " + orderId);
+```
+
+这里的重点是：
+
+```text
+void 方法没有返回值，所以用 verify(...) 验证它是否发生过。
+```
+
+如果测试只调用：
+
+```java
+orderNotificationService.notifyOrderCreated(orderId);
+```
+
+但没有 `verify(...)` 或断言，那么即使业务方法内部什么都不做，测试也可能通过。这种测试覆盖不到真实行为。
+
+### 让 `void` 方法抛异常
+
+普通的 `when(...).thenThrow(...)` 不适合 `void` 方法，因为 `void` 方法不能放进 `when(...)` 里作为返回值表达式。
+
+`void` 方法抛异常要使用：
+
+```java
+doThrow(new IllegalStateException("send message failed"))
+        .when(messageSender)
+        .send("Order created: " + orderId);
+```
+
+然后用 AssertJ 断言异常：
+
+```java
+assertThatThrownBy(() -> orderNotificationService.notifyOrderCreated(orderId))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("send message failed");
+```
+
+这个测试验证的是：
+
+```text
+1. 通知发送依赖 messageSender 失败
+2. OrderNotificationService 没有吞掉异常
+3. 异常继续向外抛出
+```
+
+### `void` 方法测试总结
+
+常见场景：
+
+- 正常执行：用 `verify(...)` 验证依赖调用。
+- 抛出异常：用 `doThrow(...).when(...)` 准备异常，再用 `assertThatThrownBy(...)` 断言。
+- 如果还要验证调用次数，可以结合 `times(1)`。
 
 ## 本课已完成内容
 
@@ -832,11 +939,18 @@ doReturn(new BigDecimal("119.80"))
 - 商品库存不足时，抛出 `product stock is not enough`
 - 异常场景下不调用 `OrderCalculator.calculateTotal(...)`
 - 保存订单失败时，抛出 `save order failed`
+- 使用独立的 `OrderCalculatorSpyTest` 学习 `Spy`
+- 验证 `Spy` 默认调用真实方法
+- 验证 `doReturn(...).when(...)` 可以局部 Stub `Spy`
+- 验证 `when(spy.method(...)).thenReturn(...)` 在 matcher 场景下可能提前调用真实方法
+- 使用独立的 `OrderNotificationServiceTest` 学习 `void` 方法测试
+- 使用 `verify(...)` 验证 `void` 方法调用
+- 使用 `doThrow(...).when(...)` 模拟 `void` 方法抛异常
 
 当前测试运行结果：
 
 ```text
-Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -848,4 +962,8 @@ BUILD SUCCESS
 4. 在成功创建订单的测试中，使用 `InOrder` 验证调用顺序：先查商品，再计算金额，最后保存订单。
 5. 把保存失败测试里的 `when(...).thenThrow(...)` 改成 `doThrow(...).when(...)`，观察测试结果是否仍然通过。
 6. 把成功创建订单测试里的 `when(...).thenAnswer(...)` 改成 `doAnswer(...).when(...)`，观察测试结果是否仍然通过。
-7. 把 `OrderCalculator` 从 `@Mock` 改成 `@Spy`，体验真实方法默认会被调用。
+7. 新增独立的 `OrderCalculatorSpyTest`，体验 `Spy` 默认调用真实方法。
+8. 在 `OrderCalculatorSpyTest` 中使用 `doReturn(...).when(...)`，体验 `Spy` 的局部 Stub。
+9. 对比 `when(spy.method(...)).thenReturn(...)` 和 `doReturn(...).when(spy).method(...)` 的差异。
+10. 新增独立的 `OrderNotificationServiceTest`，用 `verify(...)` 验证 `void` 方法调用。
+11. 使用 `doThrow(...).when(...)` 模拟 `void` 方法抛异常。
