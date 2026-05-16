@@ -1,6 +1,6 @@
 # Java 自动化测试学习进度交接
 
-更新时间：2026-05-16 19:32 CST
+更新时间：2026-05-16 20:05 CST
 
 ## 项目位置
 
@@ -44,7 +44,7 @@ mvn test
 最近一次测试结果：
 
 ```text
-Tests run: 29, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 32, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -165,6 +165,7 @@ src/test/java/com/example/testinglab/order/application/OrderServiceTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerSpringBootTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerRandomPortTest.java
+src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderMapperTest.java
 src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderRepositoryImplTest.java
 src/test/java/com/example/testinglab/notification/application/OrderNotificationServiceTest.java
 src/test/java/com/example/testinglab/common/config/ApplicationInfoPropertiesTest.java
@@ -197,7 +198,7 @@ mock-maker-subclass
 阶段 1：单元测试基础 - 已完成
 阶段 2：Mock 与可测试代码设计 - 已完成并收束
 阶段 3：Spring Boot 测试 - Web 层测试已完成，Profile 已学习
-阶段 4：MyBatis Plus 数据层测试 - 环境已搭建，准备开始 Mapper 测试
+阶段 4：MyBatis Plus 数据层测试 - 已完成基础 Mapper 测试、Repository 保存测试、按 productName 查询测试、空结果测试
 阶段 5：接口自动化测试 - 未开始
 阶段 6：属性测试与 Fuzzing - 未开始
 阶段 7：外部服务与真实依赖测试 - 未开始
@@ -208,7 +209,7 @@ mock-maker-subclass
 当前建议：
 
 ```text
-下一次学习 MyBatis Plus Mapper 测试，建议新增 OrderMapperTest。
+下一次继续 MyBatis Plus 数据层测试，建议学习多条件查询、排序或数据库约束测试。
 不要为了新知识点反复修改已经完成的 Mockito / Spring Boot Web 测试。
 新增代码时遵守当前分层：domain、application、interfaces.rest、infrastructure.persistence、common.error。
 ```
@@ -297,6 +298,13 @@ mock-maker-subclass
 - 新增 `OrderMapper`
 - 新增 `OrderRepositoryImpl`
 - 新增 `OrderRepositoryImplTest`
+- 新增 `OrderMapperTest`
+- 已完成 `OrderMapper.insert(...)` 和 `OrderMapper.selectById(...)` 测试
+- 已完成 `OrderRepository.save(...)` 落库测试
+- 已完成 `OrderRepository.findByProductName(...)` 查询测试
+- 已完成查询不到数据时返回空 List 的测试
+- 已学习 `LambdaQueryWrapper.eq(...)`
+- 已理解 `schema.sql` 负责建表，`@Transactional` 负责测试结束后回滚数据
 
 当前数据访问结构：
 
@@ -307,7 +315,7 @@ Service -> Repository -> Mapper -> Database
 下一步建议：
 
 ```text
-新增 OrderMapperTest，直接测试 MyBatis Plus Mapper 的 insert 和 selectById。
+继续学习 MyBatis Plus 多条件查询，例如 productName + totalAmount 范围查询；之后学习数据库约束测试和 Testcontainers。
 ```
 - 已完成 @SpringBootTest + MockMvc 阶段问答收束
 - 已完成第一个 @SpringBootTest(webEnvironment = RANDOM_PORT) + TestRestTemplate 测试

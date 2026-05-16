@@ -85,7 +85,7 @@ OrderRepositoryImpl
 
 - `OrderDO`：数据库表对应的数据对象，带有 MyBatis Plus 表映射注解
 - `OrderMapper`：继承 `BaseMapper<OrderDO>`，获得 `insert`、`selectById` 等基础数据库操作
-- `OrderRepositoryImpl`：实现领域层的 `OrderRepository`，负责把 `Order` 转成 `OrderDO` 后保存
+- `OrderRepositoryImpl`：实现领域层的 `OrderRepository`，负责 `Order` 与 `OrderDO` 之间的转换，并通过 `OrderMapper` 访问数据库
 
 ## 第一个 Repository 集成测试
 
@@ -145,9 +145,9 @@ Repository 实现 -> Mapper -> 数据库表
 6. Testcontainers：使用真实 MySQL 容器替代 H2
 ```
 
-## 下一步练习
+## 已完成练习
 
-下一节建议由学习者自己编写 `OrderMapperTest`。
+已完成 `OrderMapperTest`。
 
 测试目标：
 
@@ -177,4 +177,44 @@ shouldInsertAndSelectOrderDO()
 orderMapper.insert(orderDO)
 orderMapper.selectById("p-3001")
 assertThat(...)
+```
+
+已完成 `OrderRepositoryImplTest` 中的查询测试。
+
+测试目标：
+
+```text
+1. 根据 productName 查询到匹配订单列表
+2. 数据库中存在干扰数据时，只返回符合条件的数据
+3. 查询不到数据时返回空 List
+```
+
+已学习的 MyBatis Plus 条件查询 API：
+
+```java
+LambdaQueryWrapper<OrderDO> queryWrapper = new LambdaQueryWrapper<>();
+queryWrapper.eq(OrderDO::getProductName, productName);
+orderMapper.selectList(queryWrapper);
+```
+
+含义：
+
+```text
+根据 OrderDO 的 productName 字段生成等值查询条件。
+```
+
+## 下一步练习
+
+建议继续学习多条件查询，例如：
+
+```text
+根据 productName 和最小 totalAmount 查询订单
+```
+
+会用到：
+
+```text
+eq
+ge
+selectList
 ```

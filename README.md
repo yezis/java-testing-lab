@@ -143,9 +143,9 @@ docs/session-progress.md
 
 后续会继续补充：
 
-- Mockito 进阶
-- Spring Boot 测试
-- 集成测试
 - Testcontainers
+- 外部服务测试
 - API 自动化测试
 - 属性测试与 Fuzzing
+- 测试覆盖率与持续集成
+- UI 自动化测试
