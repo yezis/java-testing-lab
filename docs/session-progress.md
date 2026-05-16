@@ -1,6 +1,6 @@
 # Java 自动化测试学习进度交接
 
-更新时间：2026-05-13 00:05 CST
+更新时间：2026-05-16 17:39 CST
 
 ## 项目位置
 
@@ -44,7 +44,7 @@ mvn test
 最近一次测试结果：
 
 ```text
-Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -149,6 +149,7 @@ src/test/java/com/example/testinglab/order/domain/OrderCalculatorTest.java
 src/test/java/com/example/testinglab/order/domain/OrderCalculatorSpyTest.java
 src/test/java/com/example/testinglab/order/application/OrderServiceTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerTest.java
+src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerSpringBootTest.java
 src/test/java/com/example/testinglab/notification/application/OrderNotificationServiceTest.java
 ```
 
@@ -182,7 +183,7 @@ mock-maker-subclass
 当前建议：
 
 ```text
-下一次学习 @SpringBootTest + MockMvc。
+下一次学习 @SpringBootTest(webEnvironment = RANDOM_PORT) 真实端口测试。
 不要为了新知识点反复修改已经完成的 Mockito 测试；Spring Boot 测试应新增独立测试类。
 新增代码时遵守当前分层：domain、application、interfaces.rest、common.error。
 ```
@@ -252,6 +253,10 @@ mock-maker-subclass
 - 已完成 POST /api/orders 请求体字段校验失败测试
 - 已完成 JSON 反序列化失败测试：quantity = "abc" 返回 400
 - 已完成 @WebMvcTest 小阶段问答收束
+- 已完成第一个 @SpringBootTest + MockMvc 测试
+- 已完成 @SpringBootTest + MockMvc 真实 404 异常链路测试
+- 已完成 @SpringBootTest + MockMvc 真实 POST 成功链路测试
+- 已完成 @SpringBootTest + MockMvc 阶段问答收束
 
 当前 Spring Boot 示例接口：
 
@@ -272,7 +277,18 @@ OrderController.getOrder(orderId)
 下一步练习：
 
 ```text
-进入 @SpringBootTest + MockMvc，学习完整 Spring 上下文测试。
+学习 @SpringBootTest(webEnvironment = RANDOM_PORT)，使用真实 HTTP 客户端访问随机端口。
+```
+
+@SpringBootTest + MockMvc 阶段总结：
+
+```text
+@SpringBootTest 启动完整 Spring Boot 测试上下文。
+默认 WebEnvironment 是 MOCK，不监听真实 HTTP 端口。
+@AutoConfigureMockMvc 自动配置 MockMvc。
+MockMvc 在测试进程内部模拟 HTTP 请求。
+它适合验证 Controller、Service、ControllerAdvice 等多个真实 Spring Bean 的协作。
+它和 @WebMvcTest 最大区别是：@WebMvcTest 只加载 Web 层切片，Service 通常用 @MockBean；@SpringBootTest 加载更完整的应用上下文，使用真实 Bean。
 ```
 
 @WebMvcTest 阶段总结：
@@ -283,6 +299,43 @@ OrderController.getOrder(orderId)
 它不加载普通 Service、Repository、数据库配置和完整 Spring Boot 应用上下文。
 Controller 依赖的 Service 通常用 @MockBean 替代。
 它适合验证 URL、HTTP 方法、参数绑定、请求体、参数校验、状态码、响应 JSON 和异常响应。
+```
+
+@SpringBootTest + MockMvc 已完成的测试目标：
+
+```text
+当请求 GET /api/orders/o-1001 时：
+1. 使用 @SpringBootTest 启动完整 Spring Boot 测试上下文
+2. 使用 @AutoConfigureMockMvc 注入 MockMvc
+3. 不使用 @MockBean
+4. 通过真实 OrderController 调用真实 OrderQueryService
+5. 断言 HTTP 状态码是 200
+6. 断言响应 JSON 字段 orderId、productName、quantity、totalAmount
+```
+
+@SpringBootTest + MockMvc 已完成的 404 测试目标：
+
+```text
+当请求 GET /api/orders/o-404 时：
+1. 不使用 @MockBean
+2. 通过真实 OrderController 调用真实 OrderQueryService
+3. OrderQueryService 抛出 OrderNotFoundException
+4. GlobalExceptionHandler 处理异常
+5. 断言 HTTP 状态码是 404
+6. 断言 JSON 字段 code = ORDER_NOT_FOUND
+7. 断言 JSON 字段 message = order not found: o-404
+```
+
+@SpringBootTest + MockMvc 已完成的 POST 测试目标：
+
+```text
+当请求 POST /api/orders 时：
+1. 不使用 @MockBean
+2. 请求体 JSON 包含 productId = p-1001、quantity = 2
+3. 通过真实 OrderController 调用真实 OrderCommandService
+4. 断言 HTTP 状态码是 200
+5. 断言响应 JSON 字段 orderId = p-1001
+6. 断言响应 JSON 字段 productName、quantity、totalAmount
 ```
 
 已完成的测试目标：

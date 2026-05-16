@@ -912,3 +912,251 @@ Repository 查询
 ```
 
 随后进入 `@SpringBootTest + MockMvc`。
+
+## `@SpringBootTest + MockMvc`
+
+`@SpringBootTest + MockMvc` 用来启动更完整的 Spring Boot 测试上下文，但仍然通过 `MockMvc` 在测试进程内部模拟 HTTP 请求。
+
+典型结构：
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class OrderControllerSpringBootTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+}
+```
+
+含义：
+
+```text
+@SpringBootTest：
+启动完整 Spring Boot 测试上下文。
+
+@AutoConfigureMockMvc：
+自动配置 MockMvc。
+
+MockMvc：
+不启动真实端口，但可以模拟 HTTP 请求。
+```
+
+和 `@WebMvcTest` 的区别：
+
+```text
+@WebMvcTest
+-> 只加载 Web 层
+-> Service 通常用 @MockBean 替代
+-> 更轻、更快
+-> 适合 Controller 层切片测试
+
+@SpringBootTest + MockMvc
+-> 加载更完整的 Spring 上下文
+-> Controller、Service、ControllerAdvice 等都是真实 Bean
+-> 更重、更慢
+-> 适合轻量集成测试
+```
+
+当前新增测试类：
+
+```text
+src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerSpringBootTest.java
+```
+
+第一个测试目标：
+
+```text
+1. 不使用 @MockBean
+2. 请求 GET /api/orders/o-1001
+3. 使用真实 OrderController 和 OrderQueryService
+4. 断言状态码是 200
+5. 断言响应 JSON 字段正确
+```
+
+这验证的是：
+
+```text
+真实 Spring Bean 是否能协作完成一次接口请求。
+```
+
+### 真实 Bean 的 404 异常链路
+
+`@SpringBootTest + MockMvc` 也适合验证真实 Bean 之间的异常处理协作。
+
+当前真实业务行为：
+
+```java
+if ("o-404".equals(orderId)) {
+    throw new OrderNotFoundException(orderId);
+}
+```
+
+测试请求：
+
+```text
+GET /api/orders/o-404
+```
+
+完整链路：
+
+```text
+MockMvc
+-> OrderController
+-> OrderQueryService
+-> OrderNotFoundException
+-> GlobalExceptionHandler
+-> 404 + ErrorResponse JSON
+```
+
+这个测试和 `@WebMvcTest` 中的 404 测试有一个关键区别：
+
+```text
+@WebMvcTest：
+OrderQueryService 是 @MockBean，异常由测试 Stub 出来。
+
+@SpringBootTest + MockMvc：
+OrderQueryService 是真实 Bean，异常来自真实业务代码。
+```
+
+### 真实 Bean 的 POST 请求链路
+
+`@SpringBootTest + MockMvc` 也可以测试 POST 请求在完整 Spring 上下文中的执行结果。
+
+请求：
+
+```json
+{
+  "productId": "p-1001",
+  "quantity": 2
+}
+```
+
+会经过真实链路：
+
+```text
+MockMvc
+-> OrderController
+-> CreateOrderRequest
+-> OrderCommandService
+-> OrderResponse
+-> JSON
+```
+
+当前真实 `OrderCommandService` 行为：
+
+```java
+public Order createOrder(String productId, int quantity) {
+    return new Order(productId, "Java Testing Book", quantity, new BigDecimal("119.80"));
+}
+```
+
+所以响应中的 `orderId` 是：
+
+```text
+p-1001
+```
+
+这和 `@WebMvcTest` 中的 POST 成功测试不同：
+
+```text
+@WebMvcTest：
+响应由 Mock 的 orderCommandService 决定。
+
+@SpringBootTest + MockMvc：
+响应由真实 OrderCommandService 决定。
+```
+
+这个差异说明：
+
+```text
+@WebMvcTest 更适合只验证 Controller 如何处理 Web 输入输出。
+@SpringBootTest + MockMvc 更适合验证 Spring Bean 组合起来后的真实行为。
+```
+
+## `@SpringBootTest + MockMvc` 阶段收束
+
+默认情况下：
+
+```java
+@SpringBootTest
+```
+
+等价于使用 Mock Web 环境：
+
+```text
+SpringBootTest.WebEnvironment.MOCK
+```
+
+也就是说：
+
+```text
+它会启动完整 Spring Boot 测试上下文，
+但不会监听真实 HTTP 端口。
+```
+
+如果需要模拟 HTTP 请求，需要配合：
+
+```java
+@AutoConfigureMockMvc
+```
+
+并注入：
+
+```java
+MockMvc
+```
+
+本阶段核心理解：
+
+```text
+@SpringBootTest + MockMvc
+-> 完整 Spring 上下文
+-> 不启动真实端口
+-> 使用 MockMvc 在测试进程内部执行 HTTP 请求
+-> 适合测试多个真实 Spring Bean 的协作
+```
+
+和 `@WebMvcTest` 的使用边界：
+
+```text
+@WebMvcTest：
+适合 Controller / Web 层切片测试。
+Service 通常用 @MockBean 替代。
+重点验证 URL、参数绑定、请求体、校验、状态码、响应 JSON、异常响应。
+
+@SpringBootTest + MockMvc：
+适合轻量集成测试。
+Controller、Service、ControllerAdvice 等使用真实 Bean。
+重点验证完整 Spring 容器中的 Bean 装配和协作。
+```
+
+和真实 HTTP 调用的区别：
+
+```text
+@SpringBootTest + MockMvc：
+不启动真实端口，请求在测试进程内部执行。
+
+真实 HTTP 客户端，例如 Postman / REST Assured：
+应用需要监听真实端口，请求通过真实 HTTP 网络调用进入应用。
+```
+
+## `RANDOM_PORT` 真实端口测试
+
+下一步可以学习：
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+```
+
+它会启动真实 Web Server，并随机分配一个可用端口。
+
+适合测试：
+
+```text
+真实 HTTP 请求
+真实端口监听
+更接近外部客户端访问方式
+```
+
+这类测试比 `MockMvc` 更接近接口自动化测试。
