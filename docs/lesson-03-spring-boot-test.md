@@ -1160,3 +1160,121 @@ Controller、Service、ControllerAdvice 等使用真实 Bean。
 ```
 
 这类测试比 `MockMvc` 更接近接口自动化测试。
+
+典型结构：
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class OrderControllerRandomPortTest {
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired
+    private TestRestTemplate testRestTemplate;
+}
+```
+
+含义：
+
+```text
+RANDOM_PORT：
+启动真实 Web Server，并使用随机可用端口，避免端口冲突。
+
+@LocalServerPort：
+获取本次测试实际启动的端口。
+
+TestRestTemplate：
+Spring Boot 测试提供的 HTTP 客户端，用来向真实端口发请求。
+```
+
+当前新增测试类：
+
+```text
+src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerRandomPortTest.java
+```
+
+第一个测试目标：
+
+```text
+1. 启动真实随机端口
+2. 使用 TestRestTemplate 请求 http://localhost:{port}/api/orders/o-1001
+3. 响应类型使用 OrderResponse.class
+4. 断言响应体字段正确
+```
+
+和 `MockMvc` 的区别：
+
+```text
+MockMvc：
+不启动真实端口，请求在测试进程内部模拟执行。
+
+RANDOM_PORT + TestRestTemplate：
+启动真实 Tomcat 和真实端口，请求通过 HTTP 客户端进入应用。
+```
+
+这类测试更接近真实客户端访问方式，但也更重，通常不需要覆盖所有 Controller 分支。
+
+### `getForObject` 与 `getForEntity`
+
+`TestRestTemplate` 常见两种 GET 写法：
+
+```java
+OrderResponse response = testRestTemplate.getForObject(url, OrderResponse.class);
+```
+
+适合只关心响应体的场景。
+
+```java
+ResponseEntity<ErrorResponse> response = testRestTemplate.getForEntity(url, ErrorResponse.class);
+```
+
+适合需要同时断言状态码、响应头、响应体的场景。
+
+在 404 测试中使用 `getForEntity`：
+
+```text
+GET /api/orders/o-404
+-> 断言 HTTP 状态码是 404
+-> 断言响应体 code = ORDER_NOT_FOUND
+-> 断言响应体 message = order not found: o-404
+```
+
+完整链路：
+
+```text
+TestRestTemplate
+-> 真实随机端口
+-> Tomcat
+-> Spring MVC
+-> OrderController
+-> OrderQueryService
+-> OrderNotFoundException
+-> GlobalExceptionHandler
+-> HTTP 404 + JSON
+```
+
+## 三种 Web 测试方式对比
+
+| 测试方式 | Spring 上下文 | 真实端口 | HTTP 工具 | 常见用途 |
+| --- | --- | --- | --- | --- |
+| `@WebMvcTest` | Web 层切片上下文 | 否 | `MockMvc` | Controller / Web 层测试 |
+| `@SpringBootTest + MockMvc` | 完整 Spring Boot 测试上下文 | 否 | `MockMvc` | 多个真实 Bean 的轻量集成测试 |
+| `@SpringBootTest(RANDOM_PORT) + TestRestTemplate` | 完整 Spring Boot 测试上下文 | 是 | `TestRestTemplate` | 更接近真实客户端的 HTTP 测试 |
+
+选择建议：
+
+```text
+只测 Controller 参数、请求体、状态码、响应 JSON：
+优先 @WebMvcTest。
+
+想验证 Controller、Service、ControllerAdvice 等真实 Bean 协作，但不需要真实端口：
+使用 @SpringBootTest + MockMvc。
+
+想通过 localhost:随机端口进行真实 HTTP 调用：
+使用 @SpringBootTest(RANDOM_PORT) + TestRestTemplate。
+```
+
+测试越接近真实运行环境，通常越重、越慢。
+
+因此不要用最重的方式覆盖所有细碎分支，应根据测试目标选择合适层级。

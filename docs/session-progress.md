@@ -1,6 +1,6 @@
 # Java 自动化测试学习进度交接
 
-更新时间：2026-05-16 17:39 CST
+更新时间：2026-05-16 18:16 CST
 
 ## 项目位置
 
@@ -44,7 +44,7 @@ mvn test
 最近一次测试结果：
 
 ```text
-Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 27, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -150,6 +150,7 @@ src/test/java/com/example/testinglab/order/domain/OrderCalculatorSpyTest.java
 src/test/java/com/example/testinglab/order/application/OrderServiceTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerSpringBootTest.java
+src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerRandomPortTest.java
 src/test/java/com/example/testinglab/notification/application/OrderNotificationServiceTest.java
 ```
 
@@ -183,7 +184,7 @@ mock-maker-subclass
 当前建议：
 
 ```text
-下一次学习 @SpringBootTest(webEnvironment = RANDOM_PORT) 真实端口测试。
+下一次学习测试 Profile：@ActiveProfiles("test") 和 application-test.yml。
 不要为了新知识点反复修改已经完成的 Mockito 测试；Spring Boot 测试应新增独立测试类。
 新增代码时遵守当前分层：domain、application、interfaces.rest、common.error。
 ```
@@ -257,6 +258,9 @@ mock-maker-subclass
 - 已完成 @SpringBootTest + MockMvc 真实 404 异常链路测试
 - 已完成 @SpringBootTest + MockMvc 真实 POST 成功链路测试
 - 已完成 @SpringBootTest + MockMvc 阶段问答收束
+- 已完成第一个 @SpringBootTest(webEnvironment = RANDOM_PORT) + TestRestTemplate 测试
+- 已完成 RANDOM_PORT 真实端口 404 测试
+- 已完成三种 Web 测试方式对比收束
 
 当前 Spring Boot 示例接口：
 
@@ -277,7 +281,20 @@ OrderController.getOrder(orderId)
 下一步练习：
 
 ```text
-学习 @SpringBootTest(webEnvironment = RANDOM_PORT)，使用真实 HTTP 客户端访问随机端口。
+学习测试 Profile：@ActiveProfiles("test") 和 application-test.yml。
+```
+
+三种 Web 测试方式总结：
+
+```text
+@WebMvcTest：
+Web 层切片上下文，不启动真实端口，使用 MockMvc，常配 @MockBean。
+
+@SpringBootTest + MockMvc：
+完整 Spring Boot 测试上下文，不启动真实端口，使用 MockMvc，验证真实 Bean 协作。
+
+@SpringBootTest(RANDOM_PORT) + TestRestTemplate：
+完整 Spring Boot 测试上下文，启动真实随机端口，使用真实 HTTP 客户端访问接口。
 ```
 
 @SpringBootTest + MockMvc 阶段总结：
@@ -289,6 +306,28 @@ OrderController.getOrder(orderId)
 MockMvc 在测试进程内部模拟 HTTP 请求。
 它适合验证 Controller、Service、ControllerAdvice 等多个真实 Spring Bean 的协作。
 它和 @WebMvcTest 最大区别是：@WebMvcTest 只加载 Web 层切片，Service 通常用 @MockBean；@SpringBootTest 加载更完整的应用上下文，使用真实 Bean。
+```
+
+RANDOM_PORT 已完成的测试目标：
+
+```text
+当请求 GET /api/orders/o-1001 时：
+1. 使用 @SpringBootTest(webEnvironment = RANDOM_PORT) 启动真实随机端口
+2. 使用 @LocalServerPort 获取端口
+3. 使用 TestRestTemplate 发起真实 HTTP 请求
+4. 响应类型使用 OrderResponse.class
+5. 断言响应字段 orderId、productName、quantity、totalAmount
+```
+
+RANDOM_PORT 已完成的 404 测试目标：
+
+```text
+当请求 GET /api/orders/o-404 时：
+1. 使用真实随机端口和 TestRestTemplate
+2. 使用 getForEntity 获取状态码和响应体
+3. 断言 HTTP 状态码是 404
+4. 断言响应体 code = ORDER_NOT_FOUND
+5. 断言响应体 message = order not found: o-404
 ```
 
 @WebMvcTest 阶段总结：
