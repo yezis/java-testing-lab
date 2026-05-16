@@ -45,22 +45,36 @@
 
 ## 阶段 3：Spring Boot 测试
 
-状态：下一阶段。
+状态：已完成 Web 层测试，已进入数据层测试。
 
 - `@SpringBootTest`
 - `@WebMvcTest`
 - MockMvc
 - Controller 测试
-- Repository 测试
+- `@SpringBootTest(webEnvironment = RANDOM_PORT)`
+- TestRestTemplate
+- `@ActiveProfiles`
 
-## 阶段 4：接口自动化测试
+## 阶段 4：MyBatis Plus 数据层测试
+
+状态：环境已搭建，准备开始 Mapper 和 Repository 测试。
+
+- MyBatis Plus Mapper 测试
+- Repository 实现测试
+- H2 测试数据库
+- `schema.sql`
+- `@Transactional` 测试回滚
+- 测试数据准备与清理
+- 后续升级到 Testcontainers + MySQL
+
+## 阶段 5：接口自动化测试
 
 - REST Assured
 - JSON 响应断言
 - OpenAPI 契约测试
 - 测试数据准备与清理
 
-## 阶段 5：属性测试与 Fuzzing
+## 阶段 6：属性测试与 Fuzzing
 
 - 随机测试、属性测试、Fuzzing 的区别
 - jqwik 基本使用
@@ -73,21 +87,20 @@
 - 适合 Fuzzing 的代码类型：解析器、输入校验、序列化、复杂状态转换
 - 不适合 Fuzzing 的代码类型：强依赖外部服务、结果高度不确定的流程
 
-## 阶段 6：数据库与外部服务
+## 阶段 7：外部服务与真实依赖测试
 
-- H2 适用场景
 - Testcontainers
 - WireMock
 - 数据库迁移脚本测试
 
-## 阶段 7：持续集成与质量度量
+## 阶段 8：持续集成与质量度量
 
 - Maven / Gradle 测试配置
 - JaCoCo 测试覆盖率
 - GitHub Actions / Jenkins
 - 测试报告与失败诊断
 
-## 阶段 8：UI 自动化测试
+## 阶段 9：UI 自动化测试
 
 - Selenium
 - Playwright Java

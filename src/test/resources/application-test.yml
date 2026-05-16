@@ -1,0 +1,17 @@
+testing-lab:
+  application:
+    display-name: Java Testing Lab Test
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testing_lab;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true

@@ -1,6 +1,6 @@
 # Java 自动化测试学习进度交接
 
-更新时间：2026-05-16 18:16 CST
+更新时间：2026-05-16 19:32 CST
 
 ## 项目位置
 
@@ -44,7 +44,7 @@ mvn test
 最近一次测试结果：
 
 ```text
-Tests run: 27, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 29, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -78,6 +78,12 @@ Spring Boot 测试笔记：
 
 ```text
 docs/lesson-03-spring-boot-test.md
+```
+
+MyBatis Plus 数据层测试笔记：
+
+```text
+docs/lesson-04-mybatis-plus-data-test.md
 ```
 
 当前进度交接：
@@ -128,6 +134,14 @@ src/main/java/com/example/testinglab/order/interfaces/rest/OrderResponse.java
 src/main/java/com/example/testinglab/order/interfaces/rest/CreateOrderRequest.java
 ```
 
+订单 infrastructure.persistence：
+
+```text
+src/main/java/com/example/testinglab/order/infrastructure/persistence/OrderDO.java
+src/main/java/com/example/testinglab/order/infrastructure/persistence/OrderMapper.java
+src/main/java/com/example/testinglab/order/infrastructure/persistence/OrderRepositoryImpl.java
+```
+
 商品 domain：
 
 ```text
@@ -151,7 +165,16 @@ src/test/java/com/example/testinglab/order/application/OrderServiceTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerSpringBootTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerRandomPortTest.java
+src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderRepositoryImplTest.java
 src/test/java/com/example/testinglab/notification/application/OrderNotificationServiceTest.java
+src/test/java/com/example/testinglab/common/config/ApplicationInfoPropertiesTest.java
+```
+
+数据层测试资源：
+
+```text
+src/test/resources/application-test.yml
+src/test/resources/schema.sql
 ```
 
 Mockito 环境配置：
@@ -173,20 +196,21 @@ mock-maker-subclass
 ```text
 阶段 1：单元测试基础 - 已完成
 阶段 2：Mock 与可测试代码设计 - 已完成并收束
-阶段 3：Spring Boot 测试 - 已开始，业务骨架已准备
-阶段 4：接口自动化测试 - 未开始
-阶段 5：属性测试与 Fuzzing - 未开始
-阶段 6：数据库与外部服务 - 未开始
-阶段 7：持续集成与质量度量 - 未开始
-阶段 8：UI 自动化测试 - 未开始
+阶段 3：Spring Boot 测试 - Web 层测试已完成，Profile 已学习
+阶段 4：MyBatis Plus 数据层测试 - 环境已搭建，准备开始 Mapper 测试
+阶段 5：接口自动化测试 - 未开始
+阶段 6：属性测试与 Fuzzing - 未开始
+阶段 7：外部服务与真实依赖测试 - 未开始
+阶段 8：持续集成与质量度量 - 未开始
+阶段 9：UI 自动化测试 - 未开始
 ```
 
 当前建议：
 
 ```text
-下一次学习测试 Profile：@ActiveProfiles("test") 和 application-test.yml。
-不要为了新知识点反复修改已经完成的 Mockito 测试；Spring Boot 测试应新增独立测试类。
-新增代码时遵守当前分层：domain、application、interfaces.rest、common.error。
+下一次学习 MyBatis Plus Mapper 测试，建议新增 OrderMapperTest。
+不要为了新知识点反复修改已经完成的 Mockito / Spring Boot Web 测试。
+新增代码时遵守当前分层：domain、application、interfaces.rest、infrastructure.persistence、common.error。
 ```
 
 ## 已学习内容
@@ -257,10 +281,39 @@ mock-maker-subclass
 - 已完成第一个 @SpringBootTest + MockMvc 测试
 - 已完成 @SpringBootTest + MockMvc 真实 404 异常链路测试
 - 已完成 @SpringBootTest + MockMvc 真实 POST 成功链路测试
+- 已完成 @SpringBootTest(webEnvironment = RANDOM_PORT) + TestRestTemplate 测试
+- 已完成 @ActiveProfiles("test") 和 application-test.yml 基础使用
+
+### MyBatis Plus 数据层测试
+
+已完成环境搭建：
+
+- `pom.xml` 已新增 `mybatis-plus-spring-boot3-starter`
+- `pom.xml` 已新增 H2 测试数据库依赖
+- `pom.xml` 已通过 Spring Boot BOM 锁定 Spring 相关依赖版本，避免 MyBatis Plus starter 间接带入不匹配的 Spring Boot 版本
+- `src/test/resources/application-test.yml` 已配置 H2 内存数据库
+- `src/test/resources/schema.sql` 已创建 `orders` 表
+- 新增 `OrderDO`
+- 新增 `OrderMapper`
+- 新增 `OrderRepositoryImpl`
+- 新增 `OrderRepositoryImplTest`
+
+当前数据访问结构：
+
+```text
+Service -> Repository -> Mapper -> Database
+```
+
+下一步建议：
+
+```text
+新增 OrderMapperTest，直接测试 MyBatis Plus Mapper 的 insert 和 selectById。
+```
 - 已完成 @SpringBootTest + MockMvc 阶段问答收束
 - 已完成第一个 @SpringBootTest(webEnvironment = RANDOM_PORT) + TestRestTemplate 测试
 - 已完成 RANDOM_PORT 真实端口 404 测试
 - 已完成三种 Web 测试方式对比收束
+- 已完成测试 Profile：@ActiveProfiles("test") 和 application-test.yml
 
 当前 Spring Boot 示例接口：
 
@@ -281,7 +334,7 @@ OrderController.getOrder(orderId)
 下一步练习：
 
 ```text
-学习测试 Profile：@ActiveProfiles("test") 和 application-test.yml。
+学习数据层测试前的准备，或继续补充 Profile 使用边界。
 ```
 
 三种 Web 测试方式总结：
@@ -295,6 +348,18 @@ Web 层切片上下文，不启动真实端口，使用 MockMvc，常配 @MockBe
 
 @SpringBootTest(RANDOM_PORT) + TestRestTemplate：
 完整 Spring Boot 测试上下文，启动真实随机端口，使用真实 HTTP 客户端访问接口。
+```
+
+测试 Profile 已完成的测试目标：
+
+```text
+1. 新增 application.yml 默认配置：display-name = Java Testing Lab
+2. 新增 application-test.yml 测试配置：display-name = Java Testing Lab Test
+3. 新增 ApplicationInfoProperties 绑定 testing-lab.application
+4. 使用 @SpringBootTest 启动 Spring 上下文
+5. 使用 @ActiveProfiles("test") 激活 test profile
+6. 注入 ApplicationInfoProperties
+7. 断言 displayName = Java Testing Lab Test
 ```
 
 @SpringBootTest + MockMvc 阶段总结：

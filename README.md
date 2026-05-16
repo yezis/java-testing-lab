@@ -12,6 +12,7 @@
 - AssertJ
 - Mockito
 - Spring Boot 测试
+- MyBatis Plus 数据层测试
 - Maven 测试命令
 
 ## 环境要求
@@ -58,6 +59,10 @@ com.example.testinglab
 │   │   ├── OrderService
 │   │   ├── OrderQueryService
 │   │   └── OrderCommandService
+│   ├── infrastructure.persistence
+│   │   ├── OrderDO
+│   │   ├── OrderMapper
+│   │   └── OrderRepositoryImpl
 │   └── interfaces.rest
 │       ├── OrderController
 │       ├── OrderResponse
@@ -76,6 +81,7 @@ com.example.testinglab
 
 - `domain`：业务实体、领域规则、领域异常、Repository 接口
 - `application`：应用服务和用例编排
+- `infrastructure.persistence`：数据库对象、MyBatis Plus Mapper、Repository 实现
 - `interfaces.rest`：HTTP Controller、请求 DTO、响应 DTO
 - `common.error`：通用错误响应和全局异常处理
 
@@ -122,6 +128,7 @@ mock-maker-subclass
 - [第 1 课：JUnit 5 单元测试入门](docs/lesson-01-junit5.md)
 - [第 2 课：Mockito 与 Service 层单元测试](docs/lesson-02-mockito.md)
 - [第 3 课：Spring Boot Web 层测试](docs/lesson-03-spring-boot-test.md)
+- [第 4 课：MyBatis Plus 数据层测试](docs/lesson-04-mybatis-plus-data-test.md)
 - [当前学习进度交接](docs/session-progress.md)
 
 当前学习进度、环境细节、测试状态和下一步任务记录在：

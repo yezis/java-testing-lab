@@ -1278,3 +1278,93 @@ TestRestTemplate
 测试越接近真实运行环境，通常越重、越慢。
 
 因此不要用最重的方式覆盖所有细碎分支，应根据测试目标选择合适层级。
+
+## 测试 Profile
+
+真实项目通常会区分不同环境：
+
+```text
+dev   本地开发
+test  自动化测试
+prod  生产环境
+```
+
+不同环境可能有不同配置：
+
+```text
+数据库地址
+Redis 地址
+外部服务地址
+日志级别
+功能开关
+应用显示名称
+```
+
+Spring Boot 使用 Profile 区分这些配置。
+
+当前默认配置：
+
+```text
+src/main/resources/application.yml
+```
+
+```yaml
+testing-lab:
+  application:
+    display-name: Java Testing Lab
+```
+
+测试配置：
+
+```text
+src/test/resources/application-test.yml
+```
+
+```yaml
+testing-lab:
+  application:
+    display-name: Java Testing Lab Test
+```
+
+配置类：
+
+```java
+@ConfigurationProperties(prefix = "testing-lab.application")
+public record ApplicationInfoProperties(
+        String displayName
+) {
+}
+```
+
+测试中使用：
+
+```java
+@SpringBootTest
+@ActiveProfiles("test")
+class ApplicationInfoPropertiesTest {
+}
+```
+
+含义：
+
+```text
+@ActiveProfiles("test")
+-> 激活 test profile
+-> 加载 application-test.yml
+-> test profile 中的配置覆盖默认配置
+```
+
+当前测试验证：
+
+```text
+applicationInfoProperties.displayName()
+-> Java Testing Lab Test
+```
+
+这说明测试上下文确实读取到了 `application-test.yml`。
+
+测试 Profile 的用途：
+
+```text
+让测试环境使用独立配置，避免误连开发或生产资源。
+```

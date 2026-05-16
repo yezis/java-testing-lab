@@ -28,6 +28,7 @@ docs/session-progress.md
 docs/lesson-01-junit5.md
 docs/lesson-02-mockito.md
 docs/lesson-03-spring-boot-test.md
+docs/lesson-04-mybatis-plus-data-test.md
 ```
 
 Before continuing a learning session, read at least:
@@ -73,6 +74,7 @@ com.example.testinglab
 ├── common.error
 ├── order.domain
 ├── order.application
+├── order.infrastructure.persistence
 ├── order.interfaces.rest
 ├── product.domain
 ├── notification.domain
@@ -83,6 +85,7 @@ Layer rules:
 
 - `domain`: entities, domain services/rules, domain exceptions, repository interfaces.
 - `application`: application services and use-case orchestration.
+- `infrastructure.persistence`: MyBatis Plus DOs, Mappers, and Repository implementations.
 - `interfaces.rest`: Spring MVC controllers, request DTOs, response DTOs.
 - `common.error`: shared error response and global exception handling.
 
@@ -91,6 +94,7 @@ Tests should mirror the production package when practical:
 ```text
 order.domain -> OrderCalculatorTest
 order.application -> OrderServiceTest
+order.infrastructure.persistence -> OrderRepositoryImplTest / OrderMapperTest
 order.interfaces.rest -> OrderControllerTest
 notification.application -> OrderNotificationServiceTest
 ```
@@ -162,6 +166,8 @@ Use lesson docs for explanations and examples:
 ```text
 docs/lesson-01-junit5.md
 docs/lesson-02-mockito.md
+docs/lesson-03-spring-boot-test.md
+docs/lesson-04-mybatis-plus-data-test.md
 ```
 
 Use `docs/learning-plan.md` for the roadmap.
@@ -172,9 +178,17 @@ When a meaningful learning milestone is completed, update the relevant docs.
 
 ## Current Topic
 
-The project is currently in Spring Boot testing.
+The project has completed the main Spring Boot Web testing topics and is now entering MyBatis Plus data layer testing.
 
-The next planned topic is request body JSON testing for `POST /api/orders`, based on the current `docs/session-progress.md`.
+The current data access shape is:
+
+```text
+Service -> Repository -> Mapper -> Database
+```
+
+Use MyBatis Plus for the data layer. Keep services depending on Repository interfaces, not directly on MyBatis Plus Mappers.
+
+The next planned learning task is Mapper-level testing with `OrderMapperTest`, followed by Repository implementation testing.
 
 Before proceeding, check the actual current code and test status because the user may have made changes after the progress document was last updated.
 
