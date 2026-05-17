@@ -1,6 +1,6 @@
 # Java 自动化测试学习进度交接
 
-更新时间：2026-05-16 20:05 CST
+更新时间：2026-05-18 00:05 CST
 
 ## 项目位置
 
@@ -35,16 +35,29 @@ mvn=/Users/yezi/.local/apache-maven/apache-maven-3.9.15/bin/mvn
 
 注意：当前 Java 17 安装在隐藏目录 `.local` 下。IDE 如果不能直接选择隐藏目录，可以用“输入路径”或“显示隐藏文件”的方式选择上面的 JDK 路径。
 
-最近一次测试命令：
+最近一次完整测试命令：
 
 ```bash
 mvn test
 ```
 
-最近一次测试结果：
+最近一次完整测试结果：
 
 ```text
-Tests run: 32, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 50, Failures: 0, Errors: 0, Skipped: 1
+BUILD SUCCESS
+```
+
+最近一次 Testcontainers + MySQL 单测命令：
+
+```bash
+mvn test -Dtest=OrderMapperMySqlContainerTest
+```
+
+最近一次 Testcontainers + MySQL 单测结果：
+
+```text
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -166,6 +179,9 @@ src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerTest.j
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerSpringBootTest.java
 src/test/java/com/example/testinglab/order/interfaces/rest/OrderControllerRandomPortTest.java
 src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderMapperTest.java
+src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderMapperMySqlContainerTest.java
+src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderMapperMySqlServiceConnectionTest.java
+src/test/java/com/example/testinglab/support/MySqlServiceConnectionTestBase.java
 src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderRepositoryImplTest.java
 src/test/java/com/example/testinglab/notification/application/OrderNotificationServiceTest.java
 src/test/java/com/example/testinglab/common/config/ApplicationInfoPropertiesTest.java
@@ -198,7 +214,7 @@ mock-maker-subclass
 阶段 1：单元测试基础 - 已完成
 阶段 2：Mock 与可测试代码设计 - 已完成并收束
 阶段 3：Spring Boot 测试 - Web 层测试已完成，Profile 已学习
-阶段 4：MyBatis Plus 数据层测试 - 已完成基础 Mapper 测试、Repository 保存测试、按 productName 查询测试、空结果测试
+阶段 4：MyBatis Plus 数据层测试 - 已完成基础 Mapper 测试、Repository 保存测试、条件查询、排序、分页、动态条件、批量查询、批量删除、条件更新、条件删除；已开始 Testcontainers + MySQL
 阶段 5：接口自动化测试 - 未开始
 阶段 6：属性测试与 Fuzzing - 未开始
 阶段 7：外部服务与真实依赖测试 - 未开始
@@ -209,10 +225,116 @@ mock-maker-subclass
 当前建议：
 
 ```text
-下一次继续 MyBatis Plus 数据层测试，建议学习多条件查询、排序或数据库约束测试。
+下一次继续 MyBatis Plus 数据层测试，建议继续 Testcontainers + MySQL。
 不要为了新知识点反复修改已经完成的 Mockito / Spring Boot Web 测试。
 新增代码时遵守当前分层：domain、application、interfaces.rest、infrastructure.persistence、common.error。
 ```
+
+## MyBatis Plus 后续预留主题
+
+以下主题暂未学习，后续再回头补：
+
+```text
+1. 字段映射测试：@TableField
+2. 自动填充字段测试：MetaObjectHandler、createTime、updateTime
+3. 逻辑删除测试：@TableLogic
+4. 乐观锁测试：@Version
+5. 自定义 SQL 测试：@Select、XML Mapper、多表查询、聚合查询
+6. 数据库约束测试：主键重复、非空字段、唯一索引、外键约束
+7. 事务测试：@Transactional、业务异常回滚、多步数据库操作一致性
+```
+
+## Testcontainers + MySQL
+
+已新增：
+
+```text
+src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderMapperMySqlContainerTest.java
+src/test/java/com/example/testinglab/order/infrastructure/persistence/OrderMapperMySqlServiceConnectionTest.java
+src/test/java/com/example/testinglab/support/MySqlServiceConnectionTestBase.java
+```
+
+用途：
+
+```text
+使用 Testcontainers 启动真实 MySQL 容器，验证 MyBatis Plus Mapper 在真实 MySQL 上的 insert 和 selectById 行为。
+```
+
+当前实现说明：
+
+```text
+测试类使用 MySQLContainer 启动 mysql:8.4。
+mysql:8.4 镜像已拉取完成，当前代码回到 Testcontainers 针对 MySQL 的标准写法。
+MySQLContainer 会自动提供 JDBC URL、用户名、密码和驱动类名。
+测试中保留 Hikari 等待配置，避免 MySQL 刚启动时 Spring 过早连接失败。
+```
+
+Docker 未启动时，完整 mvn test 会跳过该测试。
+
+Docker 启动后可单独运行：
+
+```bash
+mvn test -Dtest=OrderMapperMySqlContainerTest
+```
+
+## MySQL 容器测试基类
+
+已新增：
+
+```text
+src/test/java/com/example/testinglab/support/MySqlServiceConnectionTestBase.java
+```
+
+用途：
+
+```text
+集中管理 Spring Boot 测试上下文、Testcontainers、mysql:8.4 容器、@ServiceConnection 和事务回滚配置。
+```
+
+当前：
+
+```text
+OrderMapperMySqlServiceConnectionTest 继承 MySqlServiceConnectionTestBase。
+具体测试类只保留 Mapper 注入、测试数据和断言。
+```
+
+验证命令：
+
+```bash
+mvn test -Dtest=OrderMapperMySqlServiceConnectionTest
+```
+
+验证结果：
+
+```text
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+## Testcontainers 复用方式说明
+
+已讨论：
+
+```text
+MySqlServiceConnectionTestBase 这种抽象基类写法是项目内复用容器配置的一种常见方式，但不是官方唯一推荐方式。
+```
+
+当前已理解的几种方式：
+
+```text
+1. 每个测试类直接声明 @Container 和 @ServiceConnection：最直观，适合少量测试类。
+2. 抽象基类：当前项目已采用，适合集中管理共同测试配置。
+3. 接口方式：测试类 implements 某个容器接口，避免占用 Java 单继承位置。
+4. 测试配置类 + @Import / @ImportTestcontainers：更偏 Spring 配置风格。
+```
+
+当前项目暂时保留抽象基类版本：
+
+```text
+src/test/java/com/example/testinglab/support/MySqlServiceConnectionTestBase.java
+```
+
+后续如果觉得每个测试类 `extends MySqlServiceConnectionTestBase` 仍然麻烦，可以再改成测试配置类或 `@ImportTestcontainers` 方式。
 
 ## 已学习内容
 
